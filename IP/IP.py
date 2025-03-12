@@ -5,8 +5,9 @@ class Socket():
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
 
-    def encapsulate_ip(self):
-        pass
+    def encapsulate_ip(self, destination: str, data: str):
+        ip_version = 0x4
+
 
     def get_own_ip(self):
         hostname = socket.gethostname()
