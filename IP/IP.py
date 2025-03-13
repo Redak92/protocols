@@ -1,4 +1,5 @@
 import socket
+import struct
 
 
 class Socket():
@@ -42,8 +43,26 @@ class Socket():
             ip_header.append(source_ip)
             ip_header.append(destination_ip)
             ip_header = b''.join(ip_header)
+            self.print_hex(ip_header)
+            ip_header = self.put_checksum(ip_header)
+            self.print_hex(ip_header)
+            
     @staticmethod
-    def set_checksum(header: bytes)
+    def checksum(header: bytes) -> int:
+        if len(header) % 2 == 1:
+            header += b'\x00'
+        
+        total = 0
+        for i in range(0, len(header), 2):
+            word = struct.unpack("!H", header[i:i+2])[0]
+            total += word
+        while total > 0xFFFF:
+            total = (total & 0xFFFF) + (total >> 16)
+
+        return ~total & 0xFFFF
+    def put_checksum(self, header: bytes) -> bytes:
+        checksum = self.checksum(header)
+        return header[:10] + checksum.to_bytes(2, byteorder='big') + header[12:]
     def print_hex(self, data: bytes):
         print(" ".join(f"{byte:02x}" for byte in data))
     def sparse_ip(self, ip: str) -> bytes:
@@ -60,4 +79,3 @@ if __name__ == "__main__":
 
 
 
-    
