@@ -2,9 +2,10 @@ import socket
 import struct
 
 
-class Socket():
+class SocketMain():
     def __init__(self):
-        #self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
         self.mtu = 1500
         self.ip = self.get_own_ip()
         self.packet_number = 0
@@ -14,10 +15,10 @@ class Socket():
         ip_version = 0x4
         ihl = 0x5 # For now, we ignore options
         dscp = 0x0  # Low priority DSCP 
-        data = data.encode()
         total_length = len(data) + 4 * ihl
         total_length_bytes = total_length.to_bytes(2, byteorder='big')
         identification = self.packet_number.to_bytes(2, byteorder='big')
+        self.packet_number = self.packet_number % 65535 + 1
         self.packet_number += 1
         if self.packet_number > 65535:
             self.packet_number = 0
@@ -27,7 +28,7 @@ class Socket():
         destination_ip = self.sparse_ip(destination)
         #Building the ip header
         ip_header = [(ip_version << 4 | ihl).to_bytes(1, byteorder='big')]
-        ip_header.append((dscp << 2).to_bytes(1, byteorder='big'))
+        ip_header.append((dscp << 2 | 0b00).to_bytes(1, byteorder='big'))
         ip_header.append(total_length_bytes)
         ip_header.append(identification)
         #Here it changes
@@ -43,10 +44,14 @@ class Socket():
             ip_header.append(source_ip)
             ip_header.append(destination_ip)
             ip_header = b''.join(ip_header)
-            self.print_hex(ip_header)
             ip_header = self.put_checksum(ip_header)
-            self.print_hex(ip_header)
-            
+            return ip_header + data.encode()
+        else:
+            raise NotImplementedError("Fragmentation is not implemented yet")
+        
+    def send_packet(self, address: tuple[str, int], packet: bytes):
+        self.socket.sendto(packet, address)
+        print("Packet sent : ", packet.hex())
     @staticmethod
     def checksum(header: bytes) -> int:
         if len(header) % 2 == 1:
@@ -58,7 +63,6 @@ class Socket():
             total += word
         while total > 0xFFFF:
             total = (total & 0xFFFF) + (total >> 16)
-
         return ~total & 0xFFFF
     def put_checksum(self, header: bytes) -> bytes:
         checksum = self.checksum(header)
@@ -68,14 +72,16 @@ class Socket():
     def sparse_ip(self, ip: str) -> bytes:
         return b''.join(map(lambda x: int(x).to_bytes(1, "big"), ip.split('.')))
     def get_own_ip(self):
+        return "127.0.0.1"
         hostname = socket.gethostname()
         own_ip = socket.gethostbyname(hostname)
         return own_ip
     
+    
 
 if __name__ == "__main__":
-    s = Socket()
-    s.encapsulate_ip("192.168.0.1", "Hell", 6)
-
+    s = SocketMain()
+    s.send_packet(("127.0.0.1", 12345), s.encapsulate_ip("127.0.0.1", "Hell", 255))
+ 
 
 
