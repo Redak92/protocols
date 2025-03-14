@@ -3,11 +3,11 @@ import struct
 
 
 class SocketMain():
-    def __init__(self):
+    def __init__(self, ip: str = "127.0.0.1"):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
         self.mtu = 1500
-        self.ip = self.get_own_ip()
+        self.ip = ip
         self.packet_number = 0
         self.ttl = 8
     def encapsulate_ip(self, destination: str, data: str, protocol: int):
@@ -33,7 +33,7 @@ class SocketMain():
         ip_header.append(identification)
         #Here it changes
         if number_of_packets == 1:
-            flags = 0x2
+            flags = 0x1
             frag_offset = 0x0
             fpluso = (flags << 13 | frag_offset).to_bytes(2, byteorder='big')
             ip_header.append(fpluso)
@@ -72,16 +72,13 @@ class SocketMain():
     def sparse_ip(self, ip: str) -> bytes:
         return b''.join(map(lambda x: int(x).to_bytes(1, "big"), ip.split('.')))
     def get_own_ip(self):
-        return "127.0.0.1"
-        hostname = socket.gethostname()
-        own_ip = socket.gethostbyname(hostname)
-        return own_ip
+        return self.ip
     
     
 
 if __name__ == "__main__":
     s = SocketMain()
-    s.send_packet(("127.0.0.1", 12345), s.encapsulate_ip("127.0.0.1", "Hell", 255))
+    s.send_packet(("127.0.0.1", 12345), s.encapsulate_ip("127.0.0.1", "Hello World", 255))
  
 
 

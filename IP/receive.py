@@ -1,9 +1,11 @@
 import socket
 from IP import SocketMain
+
+LISTEN_IP = "127.0.0.1"
 def receive_packet():
     # Create a raw socket to capture incoming IP packets
-    recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
-    recv_socket.bind(("0.0.0.0", 0))  # Listen on all interfaces
+    recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+    recv_socket.bind((LISTEN_IP, 12345))  # Listen on all interfaces
 
     print("Listening for incoming packets...")
     
@@ -19,8 +21,9 @@ def receive_packet():
         print(f"Destination IP: {destination_ip}")
         #show data
         data = packet[20:]
-        print(f"Data: {data.decode()}")
-
-        print(SocketMain.checksum(header))
+        try:
+            print(f"Data (decoded): {data.decode(errors='replace')}")  # Replace invalid bytes
+        except UnicodeDecodeError:
+            print(f"Data (hex): {data.hex()}")  # Fallback to hex representation
 if __name__ == "__main__":
     receive_packet()
