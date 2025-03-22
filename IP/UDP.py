@@ -1,6 +1,6 @@
 from IP import SocketIP
 from IP import BASE_IP
-
+import socket
 class SocketUDP(SocketIP):
     def __init__(self, ip: str = BASE_IP):
         print(f" [UDP] Binded on {ip} ")
@@ -20,8 +20,37 @@ class SocketUDP(SocketIP):
         destination_port = target_address[1]
         udp_header = self.build_udp_header(source_port, destination_port, data)
         self.sendall(target_address, udp_header, self.protocol)
+    def receive_udp(self):
+        while True:
+            print("Listening for incoming packets...")
+            packet, _ = self.reicv_socket.recvfrom(65535)
+            source_ip, _, data = self.decapsulate_ip(packet)
+            source_port = int.from_bytes(packet[20:22], byteorder='big')
+            destination_port = int.from_bytes(packet[22:24], byteorder='big')
+            print(f"Packet received from {source_ip} on port {source_port} : {data.decode()}")
+            print(f"Destination port : {destination_port}")
 
+    def receive_udp(self, port: int = 12345):
+        # Create a new socket using 'with' to ensure it gets automatically closed
+        with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP) as receive_socket:
+            receive_socket.bind((self.ip, port))
+            while True:
+                print("Listening for incoming UDP packets...")
+                packet, _ = receive_socket.recvfrom(65535)  # Receive the packet (maximum UDP size)
+
+                # Decapsulate the IP header
+                source_ip, _, data = self.decapsulate_ip(packet)  # Decapsulate the packet to get the IP header and data
+
+                # Extract UDP header fields (bytes 20-21 for source port, bytes 22-23 for destination port)
+                source_port = int.from_bytes(packet[20:22], byteorder='big')
+                destination_port = int.from_bytes(packet[22:24], byteorder='big')
+
+                # The UDP data starts right after the UDP header, which is 8 bytes
+                udp_data = data.decode()  # Assuming the data is UTF-8 encoded
+
+                print(f"Packet received from {source_ip} on port {source_port}: {udp_data}")
+                print(f"Destination port: {destination_port}")
+        
 if __name__ == "__main__":
     s = SocketUDP()
-    s.send_udp(("127.0.0.1", 8081), "Hello UDP !")
-    s.send_udp(("127.0.0.1", 8081), "Hello UDP !")
+    s.receive_udp()
