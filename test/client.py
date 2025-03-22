@@ -18,4 +18,4 @@ def tcp_client(host: str, port: int):
     client_socket.close()
 
 if __name__ == "__main__":
-    tcp_client("127.0.0.1", 12345)
+    tcp_client("192.168.1.20", 12345)

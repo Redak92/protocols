@@ -5,6 +5,8 @@ BASE_IP = "192.168.1.20"
 class SocketIP():
     def __init__(self, ip: str = BASE_IP):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+        self.reicv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+        self.reicv_socket.bind((ip, 0))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
         self.mtu = 1500  # Maximum Transmission Unit, we will fragment if necessary
         self.ip = ip
@@ -108,8 +110,29 @@ class SocketIP():
         for packet in packets:
             self.send_packet(address, packet)
         self.packet_number = self.packet_number % 65535 + 1
+        
+
+    def decapsulate_ip(self, packet: bytes):
+        true_checksum = packet[10:12]
+        if true_checksum != b'\x00\x00':
+            checksum_packet = packet[:10] + b'\x00\x00' + packet[12:20]
+            checksum = self.checksum(checksum_packet)
+            if true_checksum != checksum.to_bytes(2, byteorder='big'):
+                print("Checksum error")
+                return
+        ip_header = packet[:20]
+        source_ip = ".".join(map(str, ip_header[12:16]))
+        destination_ip = ".".join(map(str, ip_header[16:20]))
+        data = packet[20:]
+        return source_ip, destination_ip, data  
+    def receive_ip(self):
+        while True:
+            print("Listening for incoming packets...")
+            packet, _ = self.reicv_socket.recvfrom(65535)
+            source_ip, _, _ = self.decapsulate_ip(packet)
+            print(f"Packet received from {source_ip}: {packet.hex()}")
+
 
 if __name__ == "__main__":
     s = SocketIP(BASE_IP)
-    data = "".join([str(i) + " " for i in range(3000)])  # Large data to test fragmentation
-    s.sendall(("127.0.0.1", 12345), "tu vas bien ?".encode(), 255)
+    s.receive_ip()

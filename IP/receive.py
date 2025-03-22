@@ -1,11 +1,11 @@
 import socket
-from IP import SocketMain
+from IP import SocketIP
 
 LISTEN_IP = "192.168.1.20"
 def receive_packet():
     # Create a raw socket to capture incoming IP packets
     recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
-    recv_socket.bind((LISTEN_IP, 12345))  # Listen on all interfaces
+    recv_socket.bind((LISTEN_IP, 0))  # Listen on all interfaces
 
     print("Listening for incoming packets...")
     
