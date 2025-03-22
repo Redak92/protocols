@@ -26,25 +26,7 @@ class SocketICMP(SocketIP):
         icmp_header = self.build_icmp_header(icmp_type, icmp_code, data)
         self.sendall(target_address, icmp_header, self.protocol)
         
-    def receive_icmp(self):
-        # Create a raw socket to listen for ICMP packets
-        with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP) as s:
-            s.bind((self.ip, 0))  # Bind to the IP address for listening
 
-            print("Listening for ICMP packets...")
-            while True:
-                packet, addr = s.recvfrom(1024)  # Receive ICMP packets
-                print(f"Received packet from {addr}")
-
-                # Parse the ICMP header
-                icmp_type = packet[20]  # ICMP type is at byte 20
-                icmp_code = packet[21]  # ICMP code is at byte 21
-
-                # If the packet is an Echo Request (Type 8), send an Echo Reply (Type 0)
-                if icmp_type == 8:  # ICMP Echo Request
-                    print("ICMP Echo Request received, sending Echo Reply...")
-                    self.send_icmp(addr, "Pong", icmp_type=0, icmp_code=0)
-                    
     def ping(self, target_ip: str, data: str = "Ping", count: int = 4, timeout: int = 1):
         def listen_for_replies():
             with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP) as s:

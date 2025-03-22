@@ -11,7 +11,7 @@ class SocketIP():
         self.mtu = 1500  # Maximum Transmission Unit, we will fragment if necessary
         self.ip = ip
         self.packet_number = 4000
-        self.ttl = 9
+        self.ttl = 128
 
     def encapsulate_ip(self, destination: str, data: bytes, protocol: int):
         ip_version = 0x4
