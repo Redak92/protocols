@@ -1,7 +1,7 @@
 import socket
 import struct
 
-BASE_IP = "192.168.1.13"
+BASE_IP = "192.168.1.20"
 class SocketIP():
     def __init__(self, ip: str = BASE_IP):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
