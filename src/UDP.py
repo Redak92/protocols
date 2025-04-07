@@ -1,4 +1,4 @@
-from scapy.all import UDP, Raw, send
+from scapy.all import UDP, Raw, send, IP
 from IP import IPSocket
 
 class UDPSocket(IPSocket):
@@ -44,7 +44,7 @@ class UDPSocket(IPSocket):
             packet = self.packet_queue.get()
             if UDP in packet and packet[UDP].dport == self.src_port:
                 data = bytes(packet[UDP].payload)
-                print(f"Received UDP packet on port {self.src_port}: {data}")
+                yield data, (packet[UDP].sport, packet[IP].src)
 
 
 if __name__ == "__main__":
