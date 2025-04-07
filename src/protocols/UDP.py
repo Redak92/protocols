@@ -1,5 +1,5 @@
 from scapy.all import UDP, Raw, send, IP
-from IP import IPSocket
+from .IP import IPSocket
 
 class UDPSocket(IPSocket):
     def __init__(self, src_ip=None, src_port=0):
@@ -37,8 +37,8 @@ class UDPSocket(IPSocket):
         packet = self.encapsulate_udp(destination, dest_port, data)
         self.send_ip(destination, bytes(packet), self.protocol)
 
-    def receive_udp(self):
-        self.start_receiver("lo")
+    def receive_udp(self, interface: str = "lo"):
+        self.start_receiver(interface)
         
         while True:
             packet = self.packet_queue.get()
@@ -50,6 +50,8 @@ class UDPSocket(IPSocket):
 if __name__ == "__main__":
     s = UDPSocket("127.0.0.1", 12345)
     if input("Start receiver? (y/n): ").lower() == 'y':
-        s.receive_udp()
+
+        for data, addr in s.receive_udp():
+            print(f"Received from {addr}: {data}")
     else:
         s.send_udp("127.0.0.1", 12345, b"Hello, UDP!")
