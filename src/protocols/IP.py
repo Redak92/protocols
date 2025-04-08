@@ -1,14 +1,14 @@
+import socket
 import struct
 import threading
 import queue
-import scapy
-from scapy.all import IP, send, sniff, Raw
+from scapy.all import IP, send, sniff, Raw, TCP
 
 
 class IPSocket:
     def __init__(self, src_ip=None):
         self.src_ip = src_ip
-        self.packet_number = 540
+        self.packet_number = 49038
         self.ttl = 64
         self.mtu = 1500
         self.packet_queue = queue.Queue()
@@ -49,7 +49,7 @@ class IPSocket:
                 tos=dscp,
                 len=total_length,
                 id=identification,
-                flags=0,
+                flags=2,
                 frag=0,
                 ttl=self.ttl,
                 proto=protocol,
@@ -68,7 +68,7 @@ class IPSocket:
                 if end > len(data):
                     end = len(data)
                 fragment_data = data[start:end]
-                flags = 2 if i == number_of_fragments - 1 else 1
+                flags = 0 if i == number_of_fragments - 1 else 1
                 frag_offset = i * fragment_size // 8
                 fragments.append(IP(
                     version=ip_version,
@@ -88,12 +88,14 @@ class IPSocket:
     def send_ip(self, destination: str, data: bytes, protocol: int, verbose = False):
         fragments = self.encapsulate_ip(destination, data, protocol)
         for fragment in fragments:
+            fragment = IP(bytes(fragment))
+            fragment.show()
             send(fragment)
             if verbose:
                 fragment.show()
 
     def _packet_handler(self, packet):
-        if IP in packet and Raw in packet:
+        if IP in packet:
             self.packet_queue.put(packet)
 
     def start_receiver(self, interface="lo", filtre="ip"):
@@ -109,15 +111,9 @@ class IPSocket:
             return self.packet_queue.get(timeout=timeout)
         except queue.Empty:
             return None
-        
 
+    
 
 if __name__ == "__main__":
     s = IPSocket("127.0.0.1")
-    s.start_receiver("lo")
-    while True:
-        packet = s.get_packet(timeout=1)
-        if packet:
-            print(packet.show())
-        else:
-            print("No packet received.")
+    s.send_ip("127.0.0.1", b"Hello, world!", 255)

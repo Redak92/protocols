@@ -1,5 +1,5 @@
 from scapy.all import UDP, Raw, send, IP
-from .IP import IPSocket
+from IP import IPSocket
 
 class UDPSocket(IPSocket):
     def __init__(self, src_ip=None, src_port=0):
@@ -22,15 +22,7 @@ class UDPSocket(IPSocket):
         packet.chksum = checksum_value
         return packet
     
-    def pseudo_header(self, src_ip: str, dest_ip: str, protocol: int, length: int):
-        src_ip = self.sparse_ip(src_ip)
-        dest_ip = self.sparse_ip(dest_ip)
-        return (
-            src_ip + 
-            dest_ip + 
-            bytes([0, 0, protocol]) + 
-            length.to_bytes(2, 'big')
-        )
+
     
 
     def send_udp(self, destination: str, dest_port: int, data: bytes):
@@ -39,8 +31,10 @@ class UDPSocket(IPSocket):
 
     def receive_udp(self, interface: str = "lo"):
         self.start_receiver(interface)
-        
+
         while True:
+            if interface == "lo":
+                self.packet_queue.get()
             packet = self.packet_queue.get()
             if UDP in packet and packet[UDP].dport == self.src_port:
                 data = bytes(packet[UDP].payload)
@@ -48,10 +42,10 @@ class UDPSocket(IPSocket):
 
 
 if __name__ == "__main__":
-    s = UDPSocket("127.0.0.1", 12345)
     if input("Start receiver? (y/n): ").lower() == 'y':
-
-        for data, addr in s.receive_udp():
+        s = UDPSocket("127.0.0.1", 12345)
+        for data, addr in s.receive_udp("lo"):
             print(f"Received from {addr}: {data}")
     else:
+        s = UDPSocket("127.0.0.1", 8081)
         s.send_udp("127.0.0.1", 12345, b"Hello, UDP!")
