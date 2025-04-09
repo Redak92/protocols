@@ -108,7 +108,8 @@ class IPSocket:
 
     def get_packet(self, timeout=None):
         try:
-            return self.packet_queue.get(timeout=timeout)
+            packet = self.packet_queue.get(timeout=timeout)
+            return packet
         except queue.Empty:
             return None
 
@@ -116,4 +117,11 @@ class IPSocket:
 
 if __name__ == "__main__":
     s = IPSocket("127.0.0.1")
-    s.send_ip("127.0.0.1", b"Hello, world!", 255)
+    if input("Start receiver ? (y/n)") == "y":
+        s.start_receiver(interface="veth1")
+        while True:
+            packet = s.get_packet(timeout=1)
+            if packet:
+                print(f"Received packet: {packet.summary()}")
+    else:
+        s.send_ip("127.0.0.1", b"Hello, world!", 255)

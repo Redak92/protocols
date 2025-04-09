@@ -20,7 +20,7 @@ def handle_tcp_client(client_socket, addr):
 
 def tcp_server():
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    tcp_sock.bind(('127.0.0.1', 8080))
+    tcp_sock.bind(('0.0.0.0', 8080))
     tcp_sock.listen(5)
     print("TCP server listening on port 8080")
     while True:

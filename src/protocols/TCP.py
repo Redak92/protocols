@@ -1,4 +1,3 @@
-import random
 from IP import IPSocket
 from scapy.all import TCP, Raw, send, IP
 import time
@@ -43,14 +42,25 @@ class TCPSocket(IPSocket):
 
         return packet
     
-    def send_tcp(self, destination: str, dest_port: int, sequence_number:int, ack_number:int,  data: bytes, flags: str):
+    def send_tcp(self, destination: str, dest_port: int, sequence_number:int, ack_number:int,  data: bytes, flags: str, options: list = None):
         packet = self.encapsulate_tcp(dest_port, sequence_number, ack_number, flags, data)
         send(IP(dst=destination, src = self.src_ip) / packet, verbose=False) # We bypass the checksum calculation
         return
+    def listen_tcp(self, interface: str = "lo"):
+        self.start_receiver(interface=interface, filtre=f"tcp and port {self.src_port}")
+        while True: 
+            packet = self.get_packet()
+            if packet:
+                packet.show()
 
 if __name__ == "__main__":
-    s = TCPSocket("127.0.0.1", 12345)
-    s.send_tcp("127.0.0.1", 8080, random.randint(1,10000000), 0, b"", "S") 
+    if input("Want to start listening ?") == "y":
+        s = TCPSocket("192.168.10.2", 8000)
+        s.listen_tcp("veth1")
+    else:
+        s = TCPSocket("192.168.10.1", 12345)
+        s.send_tcp("192.168.10.2", 8000, 0, 0, b"Hello world !", "S")
+
 
         
 
