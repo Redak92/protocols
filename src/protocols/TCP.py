@@ -10,7 +10,7 @@ class TCPSocket(IPSocket):
         self.protocol = 6
         self.seq_num = 0
         self.ack_num = 0
-        self.window_size = 65160
+        self.window_size = 65000
 
     def encapsulate_tcp(self, dest_port: int, sequence_number: int, ack: int, flags: str, data: bytes, options: list = None):
         source_port = self.src_port
@@ -66,7 +66,36 @@ class TCPSocket(IPSocket):
             print("No good ack from SYNACK")
             return
         ack_options = [('NOP', None),('NOP', None), ('Timestamp', (self.get_time(), self.get_ts(synack.options)[0]))]
-        self.send_tcp(ip, port, seq + 1, synack.seq + 1, b"", "A", options=ack_options)
+        new_seq = seq + 1
+        new_ack = synack.seq + 1
+        self.window_size = 502
+        self.send_tcp(ip, port, new_seq, new_ack, b"", "A", options=ack_options)
+        self.window_size = 64240
+        return new_seq,  new_ack, self.get_ts(ack_options)
+
+    def end_tcp(self, ip: str, port: int, seq: int, ack: int, ts: tuple[int, int]):
+        flags = "FA"
+        options = [("NOP", None),("NOP", None), ("Timestamp", ts)]
+        data = b""
+
+        self.start_receiver("veth0", filtre=f"tcp and port {self.src_port}", lfilter= lambda packet: packet[TCP].flags == "FA" and packet[TCP].sport == port, number_of_packets=1)
+        self.send_tcp(ip, port, seq - 1, ack, data, flags, options)
+        finack = self.get_packet()[TCP]
+        while finack is None:
+            finack = self.get_packet()[TCP]
+        finack.show()
+
+        if finack.ack != (seq - 1) + 1:
+            print("Expected : ", seq)
+            print("Received : ", finack.ack)
+            print("No good ack from FINACK")
+            return
+        ack_options = [('NOP', None),('NOP', None), ('Timestamp', (self.get_time(), self.get_ts(finack.options)[0]))]
+        new_ack = finack.seq + 1
+        new_seq = finack.ack
+        self.window_size = 502
+        self.send_tcp(ip, port, new_seq, new_ack, b"", "A", options=ack_options)
+        self.window_size = 64240
 
     def get_time(self):
         return int(time.time())
@@ -81,10 +110,9 @@ if __name__ == "__main__":
         s.listen_tcp("veth1")
     else:
         s = TCPSocket("192.168.10.1", 12345)
-        s.handshake("192.168.10.2", 8080)
+        settings = s.handshake("192.168.10.2", 8080)
+        time.sleep(5)
+        s.end_tcp("192.168.10.2", 8080, settings[0] + 1, settings[1], settings[2])
 
 
         
-
-        
-    
