@@ -7,7 +7,7 @@ class UDPSocket(IPSocket):
         self.src_port = src_port
         self.protocol = 17
 
-    def encapsulate_udp(self, destination: str, dest_port: int, data: bytes):
+    def encapsulate_udp(self, dest_port: int, data: bytes):
         total_length = len(data) + 8
         packet = UDP(
             sport=self.src_port,
@@ -21,17 +21,19 @@ class UDPSocket(IPSocket):
 
     
 
-    def send_udp(self, destination: str, dest_port: int, data: bytes):
-        packet = self.encapsulate_udp(destination, dest_port, data)
-        self.send_ip(destination, bytes(packet), self.protocol)
+    def sendto(self,data: bytes, dest: tuple[str, int]):
+        destination, dest_port = dest
+        packet = self.encapsulate_udp(dest_port, data)
+        send(IP(dst=destination, src=self.src_ip) / packet, verbose=False)
 
     def receive_udp(self, interface: str = "lo"):
-        self.start_receiver(interface)
+        self.start_receiver(interface, filtre=f"udp and port {self.src_port}")
 
         while True:
             if interface == "lo":
                 self.packet_queue.get()
             packet = self.packet_queue.get()
+
             if UDP in packet and packet[UDP].dport == self.src_port:
                 data = bytes(packet[UDP].payload)
                 yield data, (packet[UDP].sport, packet[IP].src)
@@ -44,4 +46,4 @@ if __name__ == "__main__":
             print(f"Received from {addr}: {data}")
     else:
         s = UDPSocket("192.168.10.1", 8081)
-        s.send_udp("192.168.10.2", 12345, b"Hello, UDP!")
+        s.send_udp("192.168.10.2", 8081, b"Hello, UDP!")
