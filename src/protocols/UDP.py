@@ -16,10 +16,6 @@ class UDPSocket(IPSocket):
             chksum=0
         ) / Raw(load=data)
         
-        #Pseudo header calculation
-        pseudo_header = self.pseudo_header(self.src_ip, destination, self.protocol, total_length)
-        checksum_value = self.checksum(pseudo_header + bytes(packet))
-        packet.chksum = checksum_value
         return packet
     
 
@@ -43,9 +39,9 @@ class UDPSocket(IPSocket):
 
 if __name__ == "__main__":
     if input("Start receiver? (y/n): ").lower() == 'y':
-        s = UDPSocket("127.0.0.1", 12345)
-        for data, addr in s.receive_udp("lo"):
+        s = UDPSocket("192.168.10.2", 12345)
+        for data, addr in s.receive_udp("veth1"):
             print(f"Received from {addr}: {data}")
     else:
-        s = UDPSocket("127.0.0.1", 8081)
-        s.send_udp("127.0.0.1", 12345, b"Hello, UDP!")
+        s = UDPSocket("192.168.10.1", 8081)
+        s.send_udp("192.168.10.2", 12345, b"Hello, UDP!")
