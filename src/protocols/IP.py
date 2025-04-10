@@ -13,6 +13,8 @@ class IPSocket:
         self.mtu = 1500
         self.packet_queue = queue.Queue()
         self.running = False
+
+        self.num_packet_sniff = None
     @staticmethod
     def checksum(header: bytes) -> int:
         if len(header) % 2 == 1:
@@ -98,13 +100,16 @@ class IPSocket:
         if IP in packet:
             self.packet_queue.put(packet)
 
-    def start_receiver(self, interface="lo", filtre="ip"):
+    def start_receiver(self, interface="lo", filtre="ip", lfilter=None, number_of_packets=None):
         self.running = True
-        self.ip_thread = threading.Thread(target=self._receive_loop, args=(interface, filtre,), daemon=True)
+        self.num_packet_sniff = number_of_packets
+        self.ip_thread = threading.Thread(target=self._receive_loop, args=(interface, filtre, lfilter), daemon=True)
         self.ip_thread.start()
 
-    def _receive_loop(self, interface, filtre):
-        sniff(iface=interface, prn=self._packet_handler, filter=filtre, store=0, stop_filter=lambda x: not self.running)
+    def _receive_loop(self, interface, filtre, lfilter):
+        sniff(iface=interface, prn=self._packet_handler, filter=filtre, store=0, stop_filter=lambda x: self.decrement_packet_number(), lfilter=lfilter)
+        self.running = False
+        print("Receiver stopped.")
 
     def get_packet(self, timeout=None):
         try:
@@ -113,15 +118,23 @@ class IPSocket:
         except queue.Empty:
             return None
 
-    
+    def decrement_packet_number(self):
+        if self.num_packet_sniff is not None:
+            self.num_packet_sniff -= 1
+            return (self.num_packet_sniff == 0)
+        else:
+            return False
 
 if __name__ == "__main__":
-    s = IPSocket("127.0.0.1")
     if input("Start receiver ? (y/n)") == "y":
-        s.start_receiver(interface="veth1")
+        s = IPSocket("192.168.10.2")
+        s.start_receiver(interface="veth1", lfilter=lambda x: IP in x, number_of_packets=2)
         while True:
+            if s.running == False:
+                break
             packet = s.get_packet(timeout=1)
             if packet:
                 print(f"Received packet: {packet.summary()}")
     else:
-        s.send_ip("127.0.0.1", b"Hello, world!", 255)
+        s = IPSocket("192.168.10.1")
+        s.send_ip("192.168.10.2", b"Hello, world!", 255)

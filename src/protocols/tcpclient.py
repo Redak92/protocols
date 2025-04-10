@@ -3,7 +3,7 @@ import socket
 
 # Client TCP
 def main():
-    server_address = ('localhost', 8080)  # Adresse du serveur TCP (doit correspondre au serveur)
+    server_address = ('192.168.10.2', 8080)  # Adresse du serveur TCP (doit correspondre au serveur)
     # Création du socket TCP
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         try:
