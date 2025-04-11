@@ -17,9 +17,7 @@ def main():
                     break
                 print(f"Envoi de {message} au serveur {server_address}")
                 sock.sendall(message.encode())  # Envoie le message au serveur
-                # Attendre une réponse du serveur
-                data = sock.recv(1024).decode()
-                print(f"Réponse du serveur : {data}")
+
 
         except Exception as e:
             print(f'Erreur: {e}')

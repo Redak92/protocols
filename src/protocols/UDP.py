@@ -24,7 +24,8 @@ class UDPSocket(IPSocket):
     def sendto(self,data: bytes, dest: tuple[str, int]):
         destination, dest_port = dest
         packet = self.encapsulate_udp(dest_port, data)
-        send(IP(dst=destination, src=self.src_ip) / packet, verbose=False)
+        send(IP(dst=destination, src=self.src_ip, id=self.packet_number) / packet, verbose=False)
+        self.packet_number += 1
 
     def receive_udp(self, interface: str = "lo"):
         self.start_receiver(interface, filtre=f"udp and port {self.src_port}")

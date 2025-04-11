@@ -2,7 +2,7 @@ from IP import IPSocket
 from scapy.all import TCP, Raw, send, IP
 import time
 import random
-
+import math
 class TCPSocket(IPSocket):
     def __init__(self, src_ip=None, src_port=0):
         super().__init__(src_ip)
@@ -11,6 +11,7 @@ class TCPSocket(IPSocket):
         self.seq_num = 0
         self.ack_num = 0
         self.window_size = 65000
+        self.mss = 1460
 
     def encapsulate_tcp(self, dest_port: int, sequence_number: int, ack: int, flags: str, data: bytes, options: list = None):
         source_port = self.src_port
@@ -43,7 +44,7 @@ class TCPSocket(IPSocket):
     def handshake(self, ip: str, port: int, handshake_options = None):
         if handshake_options is None:
             handshake_options = [
-                ('MSS', 1460),
+                ('MSS', self.mss),
                 ('SAckOK', b''),
                 ('Timestamp', (self.get_time(),0)),
                 ('NOP', None),
@@ -61,7 +62,6 @@ class TCPSocket(IPSocket):
         
             synack = self.get_packet()[TCP]
            
-        synack.show()
         if synack.ack != seq + 1:
             print("No good ack from SYNACK")
             return
@@ -104,6 +104,26 @@ class TCPSocket(IPSocket):
             if i[0] == "Timestamp":
                 return i[1]
         return 0
+    
+    def send_data(self, ip: str, port: int, seq: int, ack: int, ts: tuple[int, int], data: bytes):
+        num_of_packets = math.ceil(len(data) / self.mss)
+        for i in range(num_of_packets):
+            if i == num_of_packets - 1:
+                flags = "PA"
+            else:
+                flags = "A"
+
+            left = i * self.mss
+            right = left + self.mss
+            if right > len(data):
+                right = len(data)
+            data_to_send = data[left:right]
+            opt = [("NOP", None), ("NOP", None), ("Timestamp", (self.get_time(), ts[1]))]
+            self.send_tcp(ip, port, seq, ack, data_to_send, flags, options=opt)
+            seq += len(data_to_send)
+
+        return seq, ack, opt
+
 if __name__ == "__main__":
     if input("Want to start listening ?") == "y":
         s = TCPSocket("192.168.10.2", 8080)
