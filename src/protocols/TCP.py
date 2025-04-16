@@ -118,12 +118,23 @@ class TCPSocket(IPSocket):
             if right > len(data):
                 right = len(data)
             data_to_send = data[left:right]
-            opt = [("NOP", None), ("NOP", None), ("Timestamp", (self.get_time(), ts[1]))]
+            ts = (self.get_time(), ts[1])
+            opt = [("NOP", None), ("NOP", None), ("Timestamp", ts)]
             self.send_tcp(ip, port, seq, ack, data_to_send, flags, options=opt)
             seq += len(data_to_send)
 
-        return seq, ack, opt
-
+        return seq, ack, ts
+    
+    def send_data_terminal(self, address: str, port: int, seq: int, ack: int, ts: tuple[int, int]):
+        a = input("Quel message envoyer ?")
+        while True:
+            if a == "exit":
+                break
+            data = bytes(a, encoding="utf-8")
+            print("Settings", seq, ack, ts)
+            seq, ack, ts = self.send_data(address, port, seq, ack, ts, data)
+            a = input("Quel message envoyer ?") 
+        return seq, ack, ts
 if __name__ == "__main__":
     if input("Want to start listening ?") == "y":
         s = TCPSocket("192.168.10.2", 8080)
@@ -131,7 +142,7 @@ if __name__ == "__main__":
     else:
         s = TCPSocket("192.168.10.1", 12345)
         settings = s.handshake("192.168.10.2", 8080)
-        time.sleep(5)
+        settings = s.send_data_terminal("192.168.10.2", 8080, settings[0], settings[1], settings[2])
         s.end_tcp("192.168.10.2", 8080, settings[0] + 1, settings[1], settings[2])
 
 
